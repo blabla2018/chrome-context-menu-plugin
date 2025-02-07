@@ -1,0 +1,41 @@
+{
+  "manifest_version": 3,
+  "name": "Redirect",
+  "version": "1.0",
+  "description": "Reopen current page in other way",
+  "icons": {
+    "16": "icon.png",
+    "48": "icon.png",
+    "128": "icon.png"
+  },
+  "permissions": [
+    "contextMenus",
+    "commands",
+    "tabs",
+    "scripting",
+    "activeTab"
+  ],
+  "host_permissions": [
+    "*://*.archive.is/*",
+    "*://*.yandex.com/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "commands": {
+    "freedium": {
+      "suggested_key": {
+        "default": "Alt+F",
+        "mac": "Alt+F"
+      },
+      "description": "Freedium"
+    },
+    "redium": {
+      "suggested_key": {
+        "default": "Alt+R",
+        "mac": "Alt+R"
+      },
+      "description": "Redium"
+    }
+  }
+}

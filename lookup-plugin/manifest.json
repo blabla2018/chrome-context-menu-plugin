@@ -1,0 +1,18 @@
+{
+  "manifest_version": 3,
+  "name": "Look up",
+  "version": "1.0",
+  "description": "Reopen current page in other way",
+  "icons": {
+    "16": "icon.png",
+    "48": "icon.png",
+    "128": "icon.png"
+  },
+  "permissions": [
+    "contextMenus",
+    "tabs"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  }
+}
