@@ -30,72 +30,40 @@ chrome.runtime.onInstalled.addListener(() => {
 
 // Общая функция обработки
 function handleAction(actionId, tab) {
-  let newUrl;
   const originalUrl = encodeURIComponent(tab.url);
+  let newUrl;
 
-  switch(actionId) {
-    case 'kagi-summarize':
-      newUrl = `https://kagi.com/summarizer/index.html?target_language=RU&summary=takeaway&url=${originalUrl}`;
-      break;
+  const urlMappings = {
+    'kagi-summarize': `https://kagi.com/summarizer/index.html?target_language=RU&summary=takeaway&url=${originalUrl}`,
+    '12ft-io': `https://12ft.io/proxy?q=${originalUrl}`,
+    'web-archive': `https://web.archive.org/web/2/${originalUrl}`,
+    'freedium': `https://freedium.cfd/${originalUrl}`,
+    'redium': tab.url.replace(/(https:\/\/)(?:[a-zA-Z0-9-]+\.)?medium\.com/gi, "$1readmedium.com")
+  };
 
-    case '12ft-io':
-      newUrl = `https://12ft.io/proxy?q=${originalUrl}`;
-      break;
+  newUrl = urlMappings[actionId];
 
-    case 'web-archive':
-      newUrl = `https://web.archive.org/web/2/${originalUrl}`;
-      break;
-
-    case 'archive-is':
-      newUrl = `https://archive.is/${originalUrl}`;
-      handleArchiveIs(newUrl, ['div[class="THUMBS-BLOCK"] a']);
-      return;
-
-    case 'yandex':
-      newUrl = `https://yandex.com/search/?text=url:${originalUrl}`;
-      handleArchiveIs(newUrl,  [ 'span[class~="Icon2"]', 'div[class="ExtralinksPopup-Links"] a']);
-      return;
-
-
-    case 'freedium':
-        newUrl = `https://freedium.cfd/${originalUrl}`;
-      break;
-
-    case 'redium':
-        newUrl = tab.url.replace(/(https:\/\/)(?:[a-zA-Z0-9-]+\.)?medium\.com/gi, "$1readmedium.com");
-      break;
+  if (actionId === 'archive-is') {
+    newUrl = `https://archive.is/${originalUrl}`;
+    openAndClickElements(newUrl, ['div[class="THUMBS-BLOCK"] a']);
+    return;
   }
 
-chrome.tabs.create({ url: newUrl });
-//  if (newUrl) {
-//    try {
-//      new URL(newUrl);
-//
-//      //chrome.tabs.create({ url: newUrl });
-//    } catch(error) {
-//      console.error('Invalid URL:', newUrl, error);
-//    }
-//  }
+  if (actionId === 'yandex') {
+    newUrl = `https://yandex.com/search/?text=url:${originalUrl}`;
+    openAndClickElements(newUrl, ['span[class~="Icon2"]', 'div[class="ExtralinksPopup-Links"] a']);
+    return;
+  }
 
-//const newTab = chrome.tabs.create({url: newUrl});
-////  if (actionId.equals("archive-is")) {
-////  console.error("archive-is")
-//  chrome.scripting.executeScript({
-//          target: { tabId: newTab.id },
-//          func: clickThumbsBlock,
-//        }).catch(error => {
-//          console.error('Script injection failed:', error);
-//        });
-//   //     }
+  if (newUrl) {
+    chrome.tabs.create({ url: newUrl });
+  }
 }
 
-// Обработка кликов в меню
 chrome.contextMenus.onClicked.addListener((info, tab) => {
   handleAction(info.menuItemId, tab);
 });
 
-
-// Обработка шорткатов
 chrome.commands.onCommand.addListener((command) => {
   chrome.tabs.query({active: true, currentWindow: true}, (tabs) => {
     if (tabs[0]) {
@@ -104,23 +72,13 @@ chrome.commands.onCommand.addListener((command) => {
   });
 });
 
-function handleArchiveIs(newUrl, selectors) {
+function openAndClickElements(newUrl, selectors) {
   chrome.tabs.create({ url: newUrl }, (tab) => {
     chrome.tabs.onUpdated.addListener(function listener(tabId, changeInfo, tab) {
       if (tabId === tab.id && changeInfo.status === 'complete') {
         chrome.scripting.executeScript({
           target: { tabId: tabId },
-            func: async (items) => {
-              for (const selector of items) {
-                await new Promise(resolve => {
-                  setTimeout(() => {
-                    const element = document.querySelector(selector);
-                    element?.click();
-                    resolve();
-                  }, 1000); // Фиксированная задержка 1 сек
-                });
-              }
-            },
+          func: clickElements,
           args: [selectors]
         });
         chrome.tabs.onUpdated.removeListener(listener);
@@ -129,78 +87,28 @@ function handleArchiveIs(newUrl, selectors) {
   });
 }
 
-//function handleArchiveIs(newUrl, selectors) {
-//  chrome.tabs.create({ url: newUrl }, (tab) => {
-//    chrome.tabs.onUpdated.addListener(function listener(tabId, changeInfo, tab) {
-//      if (tabId === tab.id && changeInfo.status === 'complete') {
-//        chrome.scripting.executeScript({
-//          target: { tabId: tabId },
-//          func: (items) => {  // Используем параметр 's' как селектор
-//
-//            items.forEach(item => {
-//            const element = document.querySelector(item);
-//            if (element) {
-//             setTimeout(() => {}, 500);
-//              element.click();
-//
-//            }
-//            })
-//          },
-//          args: [selectors]  // Передаем селектор как аргумент
-//        });
-//        chrome.tabs.onUpdated.removeListener(listener);
-//      }
-//    });
-//  });
-//}
+// function executeClickScript(tabId, selectors) {
+//   chrome.scripting.executeScript({
+//     target: { tabId: tabId },
+//     func: clickElements,
+//     args: [selectors]
+//   });
+// }
 
-//// Функция для клика по элементу
-//function clickThumbsBlock() {
-//  return new Promise((resolve, reject) => {
-//    const selector = 'div[class="THUMBS-BLOCK"] a';
-//    let attempts = 0;
-//
-//    const tryClick = () => {
-//      const element = document.querySelector(selector);
-//
-//      if (element) {
-//        element.click();
-//        resolve();
-//      } else if (attempts < 10) { // 10 попыток с интервалом 500ms
-//        attempts++;
-//        setTimeout(tryClick, 500);
-//      } else {
-//        reject(new Error('Element not found'));
-//      }
-//    };
-//
-//    tryClick();
-//  });
-//}
-
-// Обработка шорткатов
-//chrome.commands.onCommand.addListener((command) => {
-//  chrome.tabs.query({active: true, currentWindow: true}, (tabs) => {
-//    if (tabs[0]) {
-//      // Для шорткатов получаем выделенный текст отдельно
-//      chrome.scripting.executeScript({
-//        target: {tabId: tabs[0].id},
-//        func: () => window.getSelection().toString()
-//      }, ([result]) => {
-//        handleAction({
-//          actionId: command,
-//          tab: tabs[0],
-//          selectionText: result?.result
-//        });
-//      });
-//    }
-//  });
-//});(function() {
+async function clickElements(selectors) {
+  for (const selector of selectors) {
+    await new Promise(resolve => {
+      setTimeout(() => {
+        const element = document.querySelector(selector);
+        element?.click();
+        resolve();
+      }, 1000);
+    });
+  }
+}
 
 
-// DEBUG
-
-
+// DEBUG for browser console
 //(async function() {
 //    const selectors = [
 //        'span[class~="Icon2"]',
@@ -213,7 +121,7 @@ function handleArchiveIs(newUrl, selectors) {
 //                const element = document.querySelector(selector);
 //                element?.click();
 //                resolve();
-//            }, 500); // Фиксированная задержка 1 сек между всеми шагами
+//            }, 500); 
 //        });
 //    }
 //})();
